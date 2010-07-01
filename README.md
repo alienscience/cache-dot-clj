@@ -61,13 +61,15 @@ I've found the Least Recently Used (LRU) algorithm to be the most robust for web
 Available Functions
 -------------------
 
-    cache-dot-clj.cache/cached
-    ([f strategy])
+### cached
+
+([f strategy])
      Returns a cached function that can be invalidated by calling
      invalidate-cache e.g
       (def fib (cached fib (lru-cache-stategy 5)))
 
-    cache-dot-clj.cache/invalidate-cache
+### invalidate-cache
+
     ([cached-f & args])
      Invalidates the cache for the function call with the given arguments
      causing it to be re-evaluated e.g
