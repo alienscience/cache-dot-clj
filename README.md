@@ -6,11 +6,11 @@ Cache dot clj
 
 I have found this useful for caching the results of database calls and for holding HTML snippets.
 
-This library is available at http://clojars.org/
+This library is available at [clojars.org](http://clojars.org/) for use with Leiningen/Maven
      :dependencies [[uk.org.alienscience/cache-dot-clj "0.0.1"]]
 
-It consists of small modifications to the memoization functions described in the excellent blog post:
-http://kotka.de/blog/2010/03/The_Rule_of_Three.html
+It consists of small modifications to the memoization functions described in this excellent blog post that most Clojure programmers would find interesting:
+[Rule of Three](http://kotka.de/blog/2010/03/The_Rule_of_Three.html)
 
 Example
 -------
