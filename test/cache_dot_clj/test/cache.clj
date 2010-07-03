@@ -140,7 +140,7 @@
     
     
 (defn-cached cached-fn
-  naive-strategy
+  (lru-cache-strategy 3)
   "A cached function definition"
   [t]
   (Thread/sleep t))

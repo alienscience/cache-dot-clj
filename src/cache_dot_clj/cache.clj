@@ -54,7 +54,14 @@
         nil)])))
 
 (defmacro defn-cached
-  "Defines a cached function, like defn-memo from clojure.contrib.def"
+  "Defines a cached function, like defn-memo from clojure.contrib.def
+   e.g
+     (defn-cached fib
+        (lru-cache-strategy 10)
+        [n]
+        (if (<= n 1)
+          n
+          (+ (fib (dec n)) (fib (- n 2)))))"
   [fn-name cache-strategy & defn-stuff]
   `(do
      (defn ~fn-name ~@defn-stuff)

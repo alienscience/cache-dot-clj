@@ -1,4 +1,4 @@
-(defproject uk.org.alienscience/cache-dot-clj "0.0.1"
+(defproject uk.org.alienscience/cache-dot-clj "0.0.2"
   :description "A resettable memoize."
   :namespaces [cache-dot-clj.cache]
   :dependencies []
