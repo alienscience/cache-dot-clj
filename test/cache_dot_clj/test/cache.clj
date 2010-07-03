@@ -139,3 +139,10 @@
         "Second call hits function")))
     
     
+(defn-cached cached-fn
+  naive-strategy
+  "A cached function definition"
+  [t]
+  (Thread/sleep t))
+
+(deftest is-caching-def (is-caching cached-fn 100))
