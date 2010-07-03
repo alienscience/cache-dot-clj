@@ -61,7 +61,7 @@
     (def fib (cached fib (lru-cache-stategy 5)))"
   [f strategy]
   (let [[cached-f invalidate] (memoize-with-invalidate f strategy)]
-    (swap! invalidators* #(assoc % cached-f invalidate))
+    (swap! invalidators* assoc cached-f invalidate)
     cached-f))
 
 (defn invalidate-cache 
