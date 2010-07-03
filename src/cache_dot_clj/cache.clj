@@ -53,6 +53,15 @@
         (swap! cache-state mark-dirty args)
         nil)])))
 
+(defmacro defn-cached
+  "Defines a cached function, like defn-memo from clojure.contrib.def"
+  [fn-name cache-strategy & defn-stuff]
+  `(do
+     (defn ~fn-name ~@defn-stuff)
+     (alter-var-root (var ~fn-name)
+                     cached ~cache-strategy)
+     (var ~fn-name)))
+
 (def invalidators* (atom {}))
 
 (defn cached 
