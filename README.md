@@ -27,9 +27,6 @@ Example
       ;; Slow database read goes here
     )
 
-    (def get-user-from-db 
-      (cached get-user-from-db (lru-cache-strategy 1000)))
-
     ;; First read of the user is slow
     (get-user-from-db "fred")
  
