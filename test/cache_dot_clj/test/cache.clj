@@ -70,7 +70,7 @@
 ;; Highly used cache entries from previous tests live on -
 ;;   use a new cache for LU testing
 (deftest invalidating-lu
-  (invalidating (cached slow (lu-cache-strategy 3) 50 51 52)))
+  (invalidating (cached slow (lu-cache-strategy 3)) 50 51 52))
 
 (deftest overflow-lru
   (invalidate-cache fast-lru 100)
