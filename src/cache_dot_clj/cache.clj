@@ -29,10 +29,10 @@
     - :miss   – a function called with the cache state, the argument list
                 and the computation result in case of a cache miss
     - :invalidate - a function called with the cache state, the argument
-                    list and a placeholder that is used to invalidate the
-                    cache and cause re-excution of the function.
+                    list and the computation result that is used to
+                    invalidate the cache entry for the computation.
  
-  The default strategy is the naive safe-all strategy."
+  The default strategy is the naive save-all strategy."
   ([f] (memoize-with-invalidate f naive-strategy))
   ([f strategy]
    (let [{:keys [init cache lookup hit miss invalidate]} strategy
@@ -77,7 +77,7 @@
 
 ;;======== Stategies for for memoize ==========================================
 
-(def #^{:doc "The naive safe-all cache strategy for memoize."}
+(def #^{:doc "The naive save-all cache strategy for memoize."}
   naive-strategy
   {:init   {}
    :cache  identity
@@ -110,9 +110,9 @@
                  (update-in [:tick]  inc)
                  (assoc-in  [:cache args] result))))
    :invalidate (fn [state args placeholder]
-                 (-> state
-                     (assoc-in [:cache args] placeholder)))})
-
+                 (if (contains? (:lru state) args)
+                   (assoc-in state [:cache args] placeholder)))})
+                     
 
 (defn ttl-cache-strategy
   "Implements a time-to-live cache strategy. Upon access to the cache
@@ -138,11 +138,11 @@
                (let [now (System/currentTimeMillis)]
                  (-> state
                    (dissoc-dead now)
-                   (assoc-in  [:ttl]   args now)
+                   (assoc-in  [:ttl args] now)
                    (assoc-in  [:cache args] result))))
      :invalidate (fn [state args placeholder]
-                   (-> state
-                       (assoc-in [:cache args] placeholder)))}))
+                   (if (contains? (:ttl state) args)
+                     (assoc-in state [:cache args] placeholder)))}))
 
 (defn lu-cache-strategy
   "Implements a least-used cache strategy. Upon access to the cache
@@ -162,5 +162,5 @@
                  (assoc-in  [:lu args] 0)
                  (assoc-in  [:cache args] result))))
    :invalidate (fn [state args placeholder]
-                 (-> state
-                     (assoc-in [:cache args] placeholder)))})
+                 (if (contains? (:lu state) args)
+                   (assoc-in state [:cache args] placeholder)))})

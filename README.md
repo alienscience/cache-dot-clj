@@ -9,7 +9,7 @@ I have found this useful for caching the results of database calls and for holdi
 This library is available at [clojars.org](http://clojars.org/) for use with Leiningen/Maven
      :dependencies [[uk.org.alienscience/cache-dot-clj "0.0.1"]]
 
-It consists of small modifications to the memoization functions described in this [excellent blog post](http://kotka.de/blog/2010/03/The_Rule_of_Three.html) that most Clojure programmers would find interesting.
+It consists of small modifications to the memoization functions described in these two excellent blog posts, [the rule of three](http://kotka.de/blog/2010/03/The_Rule_of_Three.html) and [memoize done right](http://kotka.de/blog/2010/03/memoize_done_right.html). I'd recommend these posts to Clojure programmers as they discuss flexible apis and concurrency in real world detail.
 
 
 Example
@@ -63,7 +63,7 @@ Available Functions
 
 ### cached
 
-([f strategy])
+    ([f strategy])
      Returns a cached function that can be invalidated by calling
      invalidate-cache e.g
       (def fib (cached fib (lru-cache-stategy 5)))
