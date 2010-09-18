@@ -1,5 +1,11 @@
 (ns cache-dot-clj.cache "Resettable memoize")
 
+;; TODO: dump internal state to *out*
+;; TODO: separate internal datastructure algorithm
+;;       and have old school one to handle out of process caching
+;;       e.g memoize-optimised (current memoize-with-invalidate)
+;;           memoize-plain     (simple version of memoize)
+
 (declare naive-strategy)
 
 (defn- memoize-with-invalidate
