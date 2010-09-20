@@ -63,3 +63,10 @@
      (make-strategy
       (fn [f-name]
         (create-cache f-name config)))))
+
+;;------ Utils -----------------------------------------------------------------
+
+(defn cache-seq
+  "Returns a sequence containing the names of the currently used caches"
+  []
+  (seq (-> (net.sf.ehcache.CacheManager/create) .getCacheNames)))

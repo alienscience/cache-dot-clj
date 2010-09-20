@@ -5,7 +5,6 @@
 (defn- external-memoize
   "Conventional memoize for use with external caching packages"
   [f f-name strategy]
-  (println f-name)
   (let [{:keys [init lookup miss! invalidate!]} strategy
         cache (init f-name)]
     {:memoized
@@ -50,7 +49,7 @@
                     list and the computation result that is used to
                     invalidate the cache entry for the computation.
   "
-  [f strategy]
+  [f _ strategy]
   (let [{:keys [init cache lookup hit miss invalidate]} strategy
         cache-state (atom init)
         hit-or-miss (fn [state args]
@@ -80,10 +79,10 @@
           n
           (+ (fib (dec n)) (fib (- n 2)))))"
   [fn-name cache-strategy & defn-stuff]
-  `(do
+  `(let [f-name# (str *ns* "." '~fn-name)]
      (defn ~fn-name ~@defn-stuff)
      (alter-var-root (var ~fn-name)
-                     cached ~cache-strategy)
+                     cached* f-name# ~cache-strategy)
      (var ~fn-name)))
 
 (def function-utils* (atom {}))

@@ -97,7 +97,7 @@
     (expect "Second call" f < 54 "is cached")
     (expect "Second call" f > 53 "hits function")))
     
-    
+
 (defn-cached cached-fn
   (lru-cache-strategy 3)
   "A cached function definition"
@@ -106,3 +106,4 @@
   t)
 
 (deftest is-caching-def (is-caching cached-fn 100))
+
