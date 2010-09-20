@@ -1,7 +1,8 @@
 
 (ns cache-dot-clj.ehcache
   (:import [net.sf.ehcache CacheManager Cache Element])
-  (:import [net.sf.ehcache.config CacheConfiguration]))
+  (:import [net.sf.ehcache.config CacheConfiguration])
+  (:require [cache-dot-clj.bean :as bean-utils]))
 
 (defn default
   "Returns an ehcache Cache object with default configuration"
@@ -11,16 +12,29 @@
       (.addCache cache-manager cache-name))
     (.getCache cache-manager cache-name)))
 
+(defn- add-cache
+  "Adds the cache with the given config and name to the cache-manager"
+  [cache-manager config cache-name]
+  (.setName config cache-name)
+  (.addCache cache-manager config)
+  (.getCache cache-manager cache-name))
+
+(defn create-config
+  "Creates a CacheConfiguration object"
+  []
+  (CacheConfiguration.))
 
 (defn create-cache
   "Returns an ehcache Cache object with the given name and config."
   [cache-name config]
   (let [cache-manager (CacheManager/create)]
     (if-not (.cacheExists cache-manager cache-name)
-      (do
-        (.setName config cache-name)
-        (.addCache cache-manager config))
-      (.getCache cache-manager cache-name))))
+      (if (map? config)
+        (let [config-obj (create-config)]
+          (bean-utils/update-bean config-obj config)
+          (add-cache cache-manager config-obj cache-name))
+        (add-cache cache-manager config cache-name)))
+    (.getCache cache-manager cache-name)))
 
 (defn add
   "Adds an item to the given cache and returns the value added"
@@ -51,11 +65,6 @@
    :description "Ehcache backend"
    :plugs-into :external-memoize})
 
-(defn create-config
-  "Creates a CacheConfiguration object"
-  []
-  (CacheConfiguration.))
-
 (defn strategy
   "Returns a strategy for use with cache-dot-clj.cache using the
    default configuration or the given cache configuration"
@@ -72,3 +81,7 @@
   []
   (seq (-> (CacheManager/create) .getCacheNames)))
 
+(defn delete-cache
+  "Deletes all managed caches - needed by unittests"
+  []
+  (-> (CacheManager/create) .removeAll))

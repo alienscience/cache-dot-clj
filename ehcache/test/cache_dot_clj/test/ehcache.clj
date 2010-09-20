@@ -56,3 +56,9 @@
   t)
 
 (deftest is-caching-def (is-caching cached-fn 100))
+
+(deftest cache-names
+  (is (= (vec (ehcache/cache-seq))
+         ["cache-dot-clj.test.ehcache.slow"
+          "cache-dot-clj.test.ehcache.cached-fn"])))
+
