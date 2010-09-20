@@ -48,6 +48,7 @@
    :lookup lookup
    :miss! add
    :invalidate! invalidate
+   :description "Ehcache backend"
    :plugs-into :external-memoize})
 
 (defn create-config
@@ -69,4 +70,5 @@
 (defn cache-seq
   "Returns a sequence containing the names of the currently used caches"
   []
-  (seq (-> (net.sf.ehcache.CacheManager/create) .getCacheNames)))
+  (seq (-> (CacheManager/create) .getCacheNames)))
+
