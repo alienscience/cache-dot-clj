@@ -1,19 +1,30 @@
 (ns cache-dot-clj.cache "Resettable memoize")
 
-;; TODO: dump internal state to *out*
-;; TODO: separate internal datastructure algorithm
-;;       and have old school one to handle out of process caching
-;;       e.g memoize-optimised (current memoize-with-invalidate)
-;;           memoize-plain     (simple version of memoize)
-
 (declare naive-strategy)
 
-(defn- memoize-with-invalidate
-  "Returns a sequence containing a memoized version of a given 
-  function and a function that invalidates the memoized function 
-  in the cache.
+(defn- external-memoize
+  "Conventional memoize for use with external caching packages"
+  [f strategy]
+  (let [{:keys [init lookup miss! invalidate!]} strategy
+        cache init]
+    {:memoized
+     (fn [& args]
+       (let [[in-cache? res] (lookup cache args)]
+         (if in-cache?
+           res
+           (miss! cache args (apply f args)))))
+     :invalidate
+     (fn [args]
+       (invalidate! cache args))
+     }))
 
-    [ memoized-fn invalidation-fn]
+;; TODO Move some of doc up a level
+(defn- internal-memoize
+  "Returns a map containing: 
+
+    {:memoized fn     ;; Memoized version of given function
+     :invalidate fn   ;; Invalidate arguments in the cache
+    }
 
   The memoized version of the function keeps a cache of the mapping from
   arguments to results and, when calls with the same arguments are repeated
@@ -24,7 +35,7 @@
   Invalidation can be used to support the memoization of functions
   that can be effected by external events.
 
-  Optionally takes a cache strategy. The strategy is provided as a map
+  Takes a cache strategy. The strategy is provided as a map
   containing the following keys. All keys are mandatory!
   
     - :init   – the initial value for the cache and strategy state
@@ -37,27 +48,28 @@
     - :invalidate - a function called with the cache state, the argument
                     list and the computation result that is used to
                     invalidate the cache entry for the computation.
- 
-  The default strategy is the naive save-all strategy."
-  ([f] (memoize-with-invalidate f naive-strategy))
-  ([f strategy]
-   (let [{:keys [init cache lookup hit miss invalidate]} strategy
-         cache-state (atom init)
-         hit-or-miss (fn [state args]
-                       (if (lookup state args)
-                         (hit state args)
-                         (miss state args (delay (apply f args)))))
-         mark-dirty (fn [state args]
+  "
+  [f strategy]
+  (let [{:keys [init cache lookup hit miss invalidate]} strategy
+        cache-state (atom init)
+        hit-or-miss (fn [state args]
                       (if (lookup state args)
-                        (invalidate state args (delay (apply f args)))
-                        state))]
-     [
-      (fn [& args]
-        (let [cs (swap! cache-state hit-or-miss args)]
-          (-> cs cache (get args) deref)))
-      (fn [args]
-        (swap! cache-state mark-dirty args)
-        nil)])))
+                        (hit state args)
+                        (miss state args (delay (apply f args)))))
+        mark-dirty (fn [state args]
+                     (if (lookup state args)
+                       (invalidate state args (delay (apply f args)))
+                       state))]
+    {:memoized  
+     (fn [& args]
+       (let [cs (swap! cache-state hit-or-miss args)]
+         (-> cs cache (get args) deref)))
+     :invalidate
+     (fn [args]
+       (swap! cache-state mark-dirty args)
+       nil)}))
+
+;; TODO: have default strategy
 
 (defmacro defn-cached
   "Defines a cached function, like defn-memo from clojure.contrib.def
@@ -75,15 +87,20 @@
                      cached ~cache-strategy)
      (var ~fn-name)))
 
-(def invalidators* (atom {}))
+(def function-utils* (atom {}))
+
+;; TODO: have default strategy
 
 (defn cached 
   "Returns a cached function that can be invalidated by calling
    invalidate-cache e.g
     (def fib (cached fib (lru-cache-stategy 5)))"
   [f strategy]
-  (let [[cached-f invalidate] (memoize-with-invalidate f strategy)]
-    (swap! invalidators* assoc cached-f invalidate)
+  (let [memoizer (strategy :plugs-into)
+        internals (memoizer f strategy)
+        cached-f (:memoized internals)
+        utils (dissoc internals :memoized)]
+    (swap! function-utils* assoc cached-f utils)
     cached-f))
 
 (defn invalidate-cache 
@@ -93,11 +110,27 @@
      (invalidate-cache fib 29)  ;; A call to (fib 29) will not use the cache
      (fib 18)                   ;; A call to (fib 18) will use the cache" 
   [cached-f & args]
-  (if-let [inv-fn (@invalidators* cached-f)]
+  (if-let [inv-fn (:invalidate (@function-utils* cached-f))]
     (inv-fn args)))
 
 
 ;;======== Stategies for for memoize ==========================================
+
+(def #^{:doc "A naive strategy for testing external-memoize"}
+  naive-external-strategy
+  {:init (atom {})
+   :lookup (fn [m args]
+             (let [v (get @m args ::not-found)]
+               (if (= v ::not-found)
+                 [false nil]
+                 [true v])))
+   :miss! (fn [m args res]
+            (swap! m assoc args res)
+            res)
+   :invalidate! (fn [m args]
+                  (swap! m dissoc args)
+                  nil)
+   :plugs-into external-memoize})
 
 (def #^{:doc "The naive save-all cache strategy for memoize."}
   naive-strategy
@@ -106,7 +139,8 @@
    :lookup contains?
    :hit    (fn [state _] state)
    :miss   assoc
-   :invalidate assoc})
+   :invalidate assoc
+   :plugs-into internal-memoize})
 
 (defn lru-cache-strategy
   "Implements a LRU cache strategy, which drops the least recently used
@@ -133,7 +167,8 @@
                  (assoc-in  [:cache args] result))))
    :invalidate (fn [state args placeholder]
                  (if (contains? (:lru state) args)
-                   (assoc-in state [:cache args] placeholder)))})
+                   (assoc-in state [:cache args] placeholder)))
+   :plugs-into internal-memoize})
                      
 
 (defn ttl-cache-strategy
@@ -164,7 +199,8 @@
                    (assoc-in  [:cache args] result))))
      :invalidate (fn [state args placeholder]
                    (if (contains? (:ttl state) args)
-                     (assoc-in state [:cache args] placeholder)))}))
+                     (assoc-in state [:cache args] placeholder)))
+     :plugs-into internal-memoize}))
 
 (defn lu-cache-strategy
   "Implements a least-used cache strategy. Upon access to the cache
@@ -185,4 +221,5 @@
                  (assoc-in  [:cache args] result))))
    :invalidate (fn [state args placeholder]
                  (if (contains? (:lu state) args)
-                   (assoc-in state [:cache args] placeholder)))})
+                   (assoc-in state [:cache args] placeholder)))
+   :plugs-into internal-memoize})
