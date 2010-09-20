@@ -4,9 +4,10 @@
 
 (defn- external-memoize
   "Conventional memoize for use with external caching packages"
-  [f strategy]
+  [f f-name strategy]
+  (println f-name)
   (let [{:keys [init lookup miss! invalidate!]} strategy
-        cache init]
+        cache (init f-name)]
     {:memoized
      (fn [& args]
        (let [[in-cache? res] (lookup cache args)]
@@ -69,8 +70,6 @@
        (swap! cache-state mark-dirty args)
        nil)}))
 
-;; TODO: have default strategy
-
 (defmacro defn-cached
   "Defines a cached function, like defn-memo from clojure.contrib.def
    e.g
@@ -89,19 +88,33 @@
 
 (def function-utils* (atom {}))
 
-;; TODO: have default strategy
+(def memoizers* {:external-memoize external-memoize
+                 :internal-memoize internal-memoize})
 
-(defn cached 
+(defn cached* 
+  "Sets up a cache for the given function with the given name"
+  [f f-name strategy]
+  (let [memoizer (-> strategy :plugs-into memoizers*)
+        internals (memoizer f f-name strategy)
+        cached-f (:memoized internals)
+        utils (dissoc internals :memoized)]
+    (if (and (= memoizer external-memoize)
+             (= f-name :anon))
+      (throw (Exception. (str (strategy :description)
+                              " does not support anonymous functions"))))
+    (if-not (empty? utils)
+      (swap! function-utils* assoc cached-f utils))
+    cached-f))
+
+(defmacro cached
   "Returns a cached function that can be invalidated by calling
    invalidate-cache e.g
     (def fib (cached fib (lru-cache-stategy 5)))"
   [f strategy]
-  (let [memoizer (strategy :plugs-into)
-        internals (memoizer f strategy)
-        cached-f (:memoized internals)
-        utils (dissoc internals :memoized)]
-    (swap! function-utils* assoc cached-f utils)
-    cached-f))
+  (if-not (symbol? f)
+    `(cached* ~f :anon ~strategy)
+    `(let [f-name# (str *ns* "." '~f)]
+       (cached* ~f f-name# ~strategy))))
 
 (defn invalidate-cache 
   "Invalidates the cache for the function call with the given arguments
@@ -118,7 +131,7 @@
 
 (def #^{:doc "A naive strategy for testing external-memoize"}
   naive-external-strategy
-  {:init (atom {})
+  {:init (fn [_] (atom {}))
    :lookup (fn [m args]
              (let [v (get @m args ::not-found)]
                (if (= v ::not-found)
@@ -130,7 +143,8 @@
    :invalidate! (fn [m args]
                   (swap! m dissoc args)
                   nil)
-   :plugs-into external-memoize})
+   :description "Naive external strategy"
+   :plugs-into :external-memoize})
 
 (def #^{:doc "The naive save-all cache strategy for memoize."}
   naive-strategy
@@ -140,7 +154,7 @@
    :hit    (fn [state _] state)
    :miss   assoc
    :invalidate assoc
-   :plugs-into internal-memoize})
+   :plugs-into :internal-memoize})
 
 (defn lru-cache-strategy
   "Implements a LRU cache strategy, which drops the least recently used
@@ -168,7 +182,7 @@
    :invalidate (fn [state args placeholder]
                  (if (contains? (:lru state) args)
                    (assoc-in state [:cache args] placeholder)))
-   :plugs-into internal-memoize})
+   :plugs-into :internal-memoize})
                      
 
 (defn ttl-cache-strategy
@@ -200,7 +214,7 @@
      :invalidate (fn [state args placeholder]
                    (if (contains? (:ttl state) args)
                      (assoc-in state [:cache args] placeholder)))
-     :plugs-into internal-memoize}))
+     :plugs-into :internal-memoize}))
 
 (defn lu-cache-strategy
   "Implements a least-used cache strategy. Upon access to the cache
@@ -222,4 +236,4 @@
    :invalidate (fn [state args placeholder]
                  (if (contains? (:lu state) args)
                    (assoc-in state [:cache args] placeholder)))
-   :plugs-into internal-memoize})
+   :plugs-into :internal-memoize})
