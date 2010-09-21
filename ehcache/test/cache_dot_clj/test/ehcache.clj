@@ -3,7 +3,8 @@
   "Ehcache tests"
   (:use clojure.test)
   (:use cache-dot-clj.cache)
-  (:require [cache-dot-clj.ehcache :as ehcache]))
+  (:require [cache-dot-clj.ehcache :as ehcache])
+  (:use [clojure.set :only [union]]))
 
 ;;--- Copy and paste of cache-dot-clj.test.cache (different src tree)
 
@@ -57,8 +58,19 @@
 
 (deftest is-caching-def (is-caching cached-fn 100))
 
+(defn-cached persistent-fn
+  (ehcache/strategy {:disk-persistent true})
+  "A persistent cached function definition"
+  [t]
+  (Thread/sleep t)
+  t)
+
+;; TODO persistence test
+
 (deftest cache-names
-  (is (= (vec (ehcache/cache-seq))
-         ["cache-dot-clj.test.ehcache.slow"
-          "cache-dot-clj.test.ehcache.cached-fn"])))
+  (let [expected #{"cache-dot-clj.test.ehcache.slow"
+                   "cache-dot-clj.test.ehcache.cached-fn"
+                   "cache-dot-clj.test.ehcache.persistent-fn"}]
+    (is (= (union (set (ehcache/cache-seq)) expected)
+           expected))))
 
