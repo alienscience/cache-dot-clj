@@ -4,27 +4,25 @@
   (:import [net.sf.ehcache.config CacheConfiguration])
   (:require [cache-dot-clj.bean :as bean-utils]))
 
-(defn- remove-cache
+(defn remove-cache
   "Removes the cache with the given name"
-  [cache-manager cache-name]
-  (if (.cacheExists cache-manager cache-name)
-    (.removeCache cache-manager cache-name)))
+  [cache-name]
+  (let [cache-manager (CacheManager/getInstance)]
+    (if (.cacheExists cache-manager cache-name)
+      (.removeCache cache-manager cache-name))))
 
 (defn default
   "Returns an ehcache Cache object with default configuration"
   [cache-name]
-  (let [cache-manager (CacheManager/create)]
-    (remove-cache cache-manager cache-name)
-    (.addCache cache-manager cache-name)
-    (.getCache cache-manager cache-name)))
+  (let [cache-manager (CacheManager/getInstance)]
+    (.addCacheIfAbsent cache-manager cache-name)))
 
 (defn- add-cache
   "Adds the cache with the given config and name to the cache-manager"
   [cache-manager config cache-name]
   (.setName config cache-name)
   (let [cache (Cache. config)]
-    (.addCache cache-manager cache)
-    (.getCache cache-manager cache-name)))
+    (.addCacheIfAbsent cache-manager cache)))
 
 (defn create-config
   "Creates a CacheConfiguration object"
@@ -34,8 +32,7 @@
 (defn create-cache
   "Returns an ehcache Cache object with the given name and config."
   [cache-name config]
-  (let [cache-manager (CacheManager/create)]
-    (remove-cache cache-manager cache-name)
+  (let [cache-manager (CacheManager/getInstance)]
     (if (map? config)
       (let [config-obj (create-config)]
         (bean-utils/update-bean config-obj config)
@@ -85,9 +82,9 @@
 (defn cache-seq
   "Returns a sequence containing the names of the currently used caches"
   []
-  (seq (-> (CacheManager/create) .getCacheNames)))
+  (seq (-> (CacheManager/getInstance) .getCacheNames)))
 
 (defn delete-caches
   "Deletes all managed caches - needed by unittests"
   []
-  (.removalAll (CacheManager/create)))
+  (.removalAll (CacheManager/getInstance)))
