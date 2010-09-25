@@ -58,14 +58,46 @@
 
 (deftest is-caching-def (is-caching cached-fn 100))
 
-(defn-cached persistent-fn
-  (ehcache/strategy {:disk-persistent true})
-  "A persistent cached function definition"
-  [t]
-  (Thread/sleep t)
-  t)
+;; A CacheManager config to use for persistence tests
+(def persistent-config
+     [:ehcache
+      [:disk-store 
+       {:path "java.io.tmpdir/ehcache"}]
+      [:default-cache
+       {:max-elements-in-memory 100
+        :eternal false
+        :overflow-to-disk true
+        :disk-persistent false
+        :memory-store-eviction-policy "LRU"}]])
 
-;; TODO persistence test
+;; TODO: fix null pointer exception 
+(deftest is-persistent
+  (let [first-manager (ehcache/new-manager persistent-config)
+        f (cached slow (ehcache/strategy 
+                        first-manager 
+                        {:max-elements-in-memory 100
+                         :eternal true
+                         :overflow-to-disk true
+                         :disk-persistent true
+                         :clear-on-flush false}))]
+    (expect "First call" f > 100 "hits function")
+    (expect "Second call" f > 101 "hits function")
+    (expect "Third call" f > 102 "hits function") 
+    ;; Simulate end of VM
+    (ehcache/shutdown first-manager))
+  ;; Simulate start of new of VM
+  (let [second-manager (ehcache/new-manager persistent-config)
+        f (cached slow (ehcache/strategy
+                        second-manager
+                        {:max-elements-in-memory 100
+                         :eternal true
+                         :overflow-to-disk true
+                         :disk-persistent true
+                         :clear-on-flush false}))]
+    (expect "First call" f < 100 "is cached")
+    (expect "First call" f < 101 "is cached")
+    (expect "First call" f < 102 "is cached")
+    (ehcache/shutdown second-manager)))
 
 (deftest cache-names
   (let [expected #{"cache-dot-clj.test.ehcache.slow"
