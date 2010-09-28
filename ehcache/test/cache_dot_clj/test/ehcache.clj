@@ -70,7 +70,6 @@
         :disk-persistent false
         :memory-store-eviction-policy "LRU"}]])
 
-;; TODO: fix null pointer exception 
 (deftest is-persistent
   (let [first-manager (ehcache/new-manager persistent-config)
         f (cached slow (ehcache/strategy 
@@ -79,10 +78,13 @@
                          :eternal true
                          :overflow-to-disk true
                          :disk-persistent true
-                         :clear-on-flush false}))]
+                         :clear-on-flush true}))]
     (expect "First call" f > 100 "hits function")
     (expect "Second call" f > 101 "hits function")
     (expect "Third call" f > 102 "hits function") 
+    (expect "Second call" f < 100 "is cached")
+    (expect "Second call" f < 101 "is cached")
+    (expect "Second call" f < 102 "is cached")
     ;; Simulate end of VM
     (ehcache/shutdown first-manager))
   ;; Simulate start of new of VM
@@ -93,7 +95,7 @@
                          :eternal true
                          :overflow-to-disk true
                          :disk-persistent true
-                         :clear-on-flush false}))]
+                         :clear-on-flush true}))]
     (expect "First call" f < 100 "is cached")
     (expect "First call" f < 101 "is cached")
     (expect "First call" f < 102 "is cached")
