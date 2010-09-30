@@ -4,7 +4,9 @@
   (:use clojure.test)
   (:use cache-dot-clj.cache)
   (:require [cache-dot-clj.ehcache :as ehcache])
-  (:use [clojure.set :only [union]]))
+  (:use [clojure.set :only [union]])
+  (:use [clj-file-utils.core :only [rm-rf mkdir-p]])
+  (:require [clojure.java.io :as io]))
 
 ;;--- Copy and paste of cache-dot-clj.test.cache (different src tree)
 
@@ -58,11 +60,24 @@
 
 (deftest is-caching-def (is-caching cached-fn 100))
 
+
+(deftest cache-names
+  (let [expected #{"cache-dot-clj.test.ehcache.slow"
+                   "cache-dot-clj.test.ehcache.cached-fn"}]
+    (is (= (union (set (ehcache/cache-seq)) expected)
+           expected))))
+
+;;------------- Persistence tests ----------------------------------------------
+
+;; Directory to store peristent cache files
+(def cache-directory* (str (io/file (System/getProperty "java.io.tmpdir")
+                                    "ehcache")))
+
 ;; A CacheManager config to use for persistence tests
-(def persistent-config
+(def persistent-manager-config*
      [:ehcache
       [:disk-store 
-       {:path "java.io.tmpdir/ehcache"}]
+       {:path cache-directory*}]
       [:default-cache
        {:max-elements-in-memory 100
         :eternal false
@@ -70,15 +85,22 @@
         :disk-persistent false
         :memory-store-eviction-policy "LRU"}]])
 
+;; A cache config to use for persistence tests
+(def persistent-cache-config* {:max-elements-in-memory 100
+                               :eternal true
+                               :overflow-to-disk true
+                               :disk-persistent true
+                               :clear-on-flush true})
+
 (deftest is-persistent
-  (let [first-manager (ehcache/new-manager persistent-config)
-        f (cached slow (ehcache/strategy 
-                        first-manager 
-                        {:max-elements-in-memory 100
-                         :eternal true
-                         :overflow-to-disk true
-                         :disk-persistent true
-                         :clear-on-flush true}))]
+  ;; Start with a clean cache directory
+  (if (-> cache-directory* io/file .exists)
+    (rm-rf cache-directory*))
+  (mkdir-p cache-directory*)
+  ;; Create the persistent cache 
+  (let [first-manager (ehcache/new-manager persistent-manager-config*)
+        f (cached slow (ehcache/strategy first-manager
+                                         persistent-cache-config*))]
     (expect "First call" f > 100 "hits function")
     (expect "Second call" f > 101 "hits function")
     (expect "Third call" f > 102 "hits function") 
@@ -87,24 +109,11 @@
     (expect "Second call" f < 102 "is cached")
     ;; Simulate end of VM
     (ehcache/shutdown first-manager))
-  ;; Simulate start of new of VM
-  (let [second-manager (ehcache/new-manager persistent-config)
-        f (cached slow (ehcache/strategy
-                        second-manager
-                        {:max-elements-in-memory 100
-                         :eternal true
-                         :overflow-to-disk true
-                         :disk-persistent true
-                         :clear-on-flush true}))]
+  ;; Simulate start of new VM
+  (let [second-manager (ehcache/new-manager persistent-manager-config*)
+        f (cached slow (ehcache/strategy second-manager
+                                         persistent-cache-config*))]
     (expect "First call" f < 100 "is cached")
     (expect "First call" f < 101 "is cached")
     (expect "First call" f < 102 "is cached")
     (ehcache/shutdown second-manager)))
-
-(deftest cache-names
-  (let [expected #{"cache-dot-clj.test.ehcache.slow"
-                   "cache-dot-clj.test.ehcache.cached-fn"
-                   "cache-dot-clj.test.ehcache.persistent-fn"}]
-    (is (= (union (set (ehcache/cache-seq)) expected)
-           expected))))
-
