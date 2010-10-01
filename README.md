@@ -6,8 +6,9 @@ Cache dot clj
 
 I have found this useful for caching the results of database calls and for holding HTML snippets.
 
-This library is available at [clojars.org](http://clojars.org/uk.org.alienscience/cache-dot-clj) for use with Leiningen/Maven
-     :dependencies [[uk.org.alienscience/cache-dot-clj "0.0.2"]]
+This library is available at [clojars.org](http://clojars.org/uk.org.alienscience/cache-dot-clj) for use with Leiningen, Cake or Maven.
+
+     :dependencies [[uk.org.alienscience/cache-dot-clj "0.0.3"]]
 
 The internal caching functions consist of small modifications to the memoization functions described in these two excellent blog posts, [the rule of three](http://kotka.de/blog/2010/03/The_Rule_of_Three.html) and [memoize done right](http://kotka.de/blog/2010/03/memoize_done_right.html). I'd recommend these posts to Clojure programmers as they discuss flexible apis and concurrency in real world detail.
 

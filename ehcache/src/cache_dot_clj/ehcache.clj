@@ -30,7 +30,10 @@
       java.io.ByteArrayInputStream.))
 
 (defn new-manager
-  "Creates a new cache manager"
+  "Creates a new cache manager. The config can be a filename string, URL
+   object or an InputStream containing an XML configuration. To set the
+   configuration without using an external XML file a clojure, prxml style,
+   datastructure can be used."
   ([]        (new CacheManager))
   ([config]
      (cond
@@ -109,7 +112,15 @@
 
 (defn strategy
   "Returns a strategy for use with cache-dot-clj.cache using the
-   default configuration or the given cache configuration"
+   default configuration or the given cache configuration.
+   The config can be a object of class
+     net.sf.ehcache.config.CacheConfiguration
+   Or a clojure map containing keys that correspond to the setters
+   of the Cache configuration. The keys are converted to camelCase internally
+   , so for example:
+       {:max-elements-in-memory 100} calls setMaxElementsInMemory(100)
+   A CacheManager can also be passed in as the first argument, without this
+   the singleton CacheManager is used (which should be fine for most uses)."
   ([]       (make-strategy default))
   ([config] (strategy (CacheManager/getInstance) config))
   ([manager config]
