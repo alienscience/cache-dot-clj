@@ -1,4 +1,6 @@
-(ns cache-dot-clj.cache "Resettable memoize")
+(ns cache-dot-clj.cache 
+  "Resettable memoize"
+  (:require [cache-dot-clj.datastructures :as ds]))
 
 (declare naive-strategy)
 
@@ -161,28 +163,18 @@
   is reached, the longest unaccessed item is removed from the cache. In
   case there is a tie, the removal order is unspecified."
   [limit]
-  {:init   {:lru   (into {} (for [x (range (- limit) 0)] [x x]))
-            :tick  0
-            :cache {}}
-   :cache  :cache
-   :lookup (fn [state k] (contains? (:cache state) k))
-   :hit    (fn [state args]
-             (-> state
-               (assoc-in  [:lru args] (:tick state))
-               (update-in [:tick] inc)))
-   :miss   (fn [state args result]
-             (let [k (apply min-key (:lru state) (keys (:lru state)))]
-               (-> state
-                 (update-in [:lru]   dissoc k)
-                 (update-in [:cache] dissoc k)
-                 (assoc-in  [:lru args] (:tick state))
-                 (update-in [:tick]  inc)
-                 (assoc-in  [:cache args] result))))
-   :invalidate (fn [state args placeholder]
-                 (if (contains? (:lru state) args)
-                   (assoc-in state [:cache args] placeholder)))
+  {:init        (ds/linked-hash-map limit)
+   :cache       identity
+   :lookup      contains?
+   :hit         (fn [cache _] cache)
+   :miss        (fn [cache args result]
+                  (.put cache args result)
+                  cache)
+   :invalidate (fn [cache args placeholder] 
+                 (.put cache args placeholder)
+                 cache)
    :plugs-into :internal-memoize})
-                     
+
 
 (defn ttl-cache-strategy
   "Implements a time-to-live cache strategy. Upon access to the cache
