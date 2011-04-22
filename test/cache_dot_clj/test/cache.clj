@@ -6,6 +6,7 @@
 (defn slow [a] (Thread/sleep a) a)
 (def fast-naive (cached slow naive-strategy))
 (def fast-lru (cached slow (lru-cache-strategy 3)))
+(def fast-mutable-lru (cached slow (mutable-lru-cache-strategy 3)))
 (def fast-ttl (cached slow (ttl-cache-strategy 1000)))
 (def fast-lu (cached slow (lu-cache-strategy 3)))
 (def fast-external (cached slow naive-external-strategy))
@@ -30,6 +31,7 @@
 
 (deftest is-caching-naive (is-caching fast-naive 100))
 (deftest is-caching-lru (is-caching fast-lru 100))
+(deftest is-caching-mutable-lru (is-caching fast-mutable-lru 100))
 (deftest is-caching-ttl (is-caching fast-ttl 100))
 (deftest is-caching-lu (is-caching fast-lu 100))
 (deftest is-caching-external (is-caching fast-external 100))
@@ -49,6 +51,7 @@
   
 (deftest invalidating-naive (invalidating fast-naive 50 51 52))
 (deftest invalidating-lru (invalidating fast-lru 50 51 52))
+(deftest invalidating-mutable-lru (invalidating fast-mutable-lru 50 51 52))
 (deftest invalidating-ttl (invalidating fast-ttl 50 51 52))
 (deftest invalidating-external (invalidating fast-external 50 51 52))
 
@@ -72,6 +75,22 @@
   (expect "Function" fast-lru > 100 "removed from cache")
   (expect "Third call" fast-lru < 300 "is cached")
   (expect "Second call" fast-lru < 100 "is cached"))
+ 
+(deftest overflow-mutable-lru
+  (invalidate-cache fast-mutable-lru 100)
+  (invalidate-cache fast-mutable-lru 200)
+  (invalidate-cache fast-mutable-lru 300)
+  (invalidate-cache fast-mutable-lru 400)
+  (expect "First call" fast-mutable-lru > 100 "hits function")
+  (expect "First call" fast-mutable-lru > 200 "hits function")
+  (expect "First call" fast-mutable-lru > 300 "hits function")
+  (expect "First call" fast-mutable-lru > 400 "hits function")
+  (expect "Second call" fast-mutable-lru < 200 "is cached")
+  (expect "Second call" fast-mutable-lru < 300 "is cached")
+  (expect "Second call" fast-mutable-lru < 400 "is cached")
+  (expect "Function" fast-mutable-lru > 100 "removed from cache")
+  (expect "Third call" fast-mutable-lru < 300 "is cached")
+  (expect "Second call" fast-mutable-lru < 100 "is cached"))
   
 (deftest expire-ttl
   (invalidate-cache fast-ttl 50)
