@@ -1,28 +1,35 @@
-(ns cache-dot-clj.cache 
+(ns cache-dot-clj.cache
   "Resettable memoize"
   (:require [cache-dot-clj.datastructures :as ds]))
 
 (declare naive-strategy)
 
 (defn- external-memoize
-  "Conventional memoize for use with external caching packages"
-  [f f-name strategy]
+  "Conventional memoize for use with external caching packages
+
+  You may pass in an options map with the following keys:
+
+    - :cache-key   – function applied to the args to generate the cache-key. Defaults to the identity function.
+"
+  [f f-name strategy & [options]]
   (let [{:keys [init lookup miss! invalidate!]} strategy
-        cache (init f-name)]
+        cache (init f-name)
+        cache-key (or (:cache-key options) identity)]
     {:memoized
      (fn [& args]
-       (let [[in-cache? res] (lookup cache args)]
+       (let [key (cache-key args)
+             [in-cache? res] (lookup cache key)]
          (if in-cache?
            res
-           (miss! cache args (apply f args)))))
+           (miss! cache key (apply f args)))))
      :invalidate
      (fn [args]
-       (invalidate! cache args))
+       (invalidate! cache (cache-key args)))
      }))
 
 ;; TODO Move some of doc up a level
 (defn- internal-memoize
-  "Returns a map containing: 
+  "Returns a map containing:
 
     {:memoized fn     ;; Memoized version of given function
      :invalidate fn   ;; Invalidate arguments in the cache
@@ -33,13 +40,13 @@
   often, has higher performance at the expense of higher memory use.
 
   The invalidation function takes a set of function arguments and causes
-  the appropriate cache entry to re-evaluate the memoized function. 
+  the appropriate cache entry to re-evaluate the memoized function.
   Invalidation can be used to support the memoization of functions
   that can be effected by external events.
 
   Takes a cache strategy. The strategy is provided as a map
   containing the following keys. All keys are mandatory!
-  
+
     - :init   – the initial value for the cache and strategy state
     - :cache  – access function to access the cache
     - :lookup – determines whether a value is in the cache or not
@@ -50,22 +57,29 @@
     - :invalidate - a function called with the cache state, the argument
                     list and the computation result that is used to
                     invalidate the cache entry for the computation.
+
+  You may pass in an options map with the following keys:
+
+    - :cache-key   – function applied to the args to generate the cache-key. Defaults to the identity function.
   "
-  [f _ strategy]
+  [f _ strategy & [options]]
   (let [{:keys [init cache lookup hit miss invalidate]} strategy
+        cache-key (or (:cache-key options) identity)
         cache-state (atom init)
         hit-or-miss (fn [state args]
-                      (if (lookup state args)
-                        (hit state args)
-                        (miss state args (delay (apply f args)))))
+                      (let [key (cache-key args)]
+                        (if (lookup state key)
+                          (hit state key)
+                          (miss state key (delay (apply f args))))))
         mark-dirty (fn [state args]
-                     (if (lookup state args)
-                       (invalidate state args (delay (apply f args)))
-                       state))]
-    {:memoized  
+                     (let [key (cache-key args)]
+                       (if (lookup state key)
+                         (invalidate state key (delay (apply f args)))
+                         state)))]
+    {:memoized
      (fn [& args]
        (let [cs (swap! cache-state hit-or-miss args)]
-         (-> cs cache (get args) deref)))
+         (-> cs cache (get (cache-key args)) deref)))
      :invalidate
      (fn [args]
        (swap! cache-state mark-dirty args)
@@ -79,24 +93,32 @@
         [n]
         (if (<= n 1)
           n
-          (+ (fib (dec n)) (fib (- n 2)))))"
-  [fn-name cache-strategy & defn-stuff]
-  `(let [f-name# (str *ns* "." '~fn-name)]
-     (defn ~fn-name ~@defn-stuff)
-     (alter-var-root (var ~fn-name)
-                     cached* f-name# ~cache-strategy)
-     (var ~fn-name)))
+          (+ (fib (dec n)) (fib (- n 2)))))
+
+   Following the strategy you can pass in an options map with the following keys:
+
+    - :cache-key   – function applied to the args to generate the cache-key. Defaults to the identity function.
+"
+  [fn-name cache-strategy & options-and-defn-body]
+  (let [[options defn-body] (if (map? (first options-and-defn-body))
+                               [(first options-and-defn-body) (rest options-and-defn-body)]
+                               [{} options-and-defn-body])]
+    `(let [f-name# (str *ns* "." '~fn-name)]
+       (defn ~fn-name ~@defn-body)
+       (alter-var-root (var ~fn-name)
+                       cached* f-name# ~cache-strategy ~options)
+       (var ~fn-name))))
 
 (def function-utils* (atom {}))
 
 (def memoizers* {:external-memoize external-memoize
                  :internal-memoize internal-memoize})
 
-(defn cached* 
+(defn cached*
   "Sets up a cache for the given function with the given name"
-  [f f-name strategy]
+  [f f-name strategy & [options]]
   (let [memoizer (-> strategy :plugs-into memoizers*)
-        internals (memoizer f f-name strategy)
+        internals (memoizer f f-name strategy options)
         cached-f (:memoized internals)
         utils (dissoc internals :memoized)]
     (if (and (= memoizer external-memoize)
@@ -110,19 +132,28 @@
 (defmacro cached
   "Returns a cached function that can be invalidated by calling
    invalidate-cache e.g
-    (def fib (cached fib (lru-cache-stategy 5)))"
-  [f strategy]
-  (if-not (symbol? f)
-    `(cached* ~f :anon ~strategy)
-    `(let [f-name# (str *ns* "." '~f)]
-       (cached* ~f f-name# ~strategy))))
+    (def fib (cached fib (lru-cache-stategy 5)))
 
-(defn invalidate-cache 
+   Following the strategy you can pass in an options map with the following keys:
+
+    - :cache-key   – function applied to the args to generate the cache-key. Defaults to the identity function.
+
+   e.g
+
+    (def fib (cached fib (lru-cache-stategy 5) {:cach-key str}))
+"
+  [f strategy & [options]]
+  (if-not (symbol? f)
+    `(cached* ~f :anon ~strategy ~options)
+    `(let [f-name# (str *ns* "." '~f)]
+       (cached* ~f f-name# ~strategy ~options))))
+
+(defn invalidate-cache
   "Invalidates the cache for the function call with the given arguments
    causing it to be re-evaluated e.g
      (invalidate-cache fib 30)  ;; A call to (fib 30) will not use the cache
      (invalidate-cache fib 29)  ;; A call to (fib 29) will not use the cache
-     (fib 18)                   ;; A call to (fib 18) will use the cache" 
+     (fib 18)                   ;; A call to (fib 18) will use the cache"
   [cached-f & args]
   (if-let [inv-fn (:invalidate (@function-utils* cached-f))]
     (inv-fn args)))
@@ -206,7 +237,7 @@
    :miss        (fn [cache args result]
                   (.put cache args result)
                   cache)
-   :invalidate (fn [cache args placeholder] 
+   :invalidate (fn [cache args placeholder]
                  (.put cache args placeholder)
                  cache)
    :plugs-into :internal-memoize})
