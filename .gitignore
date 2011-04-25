@@ -1,0 +1,14 @@
+*jar
+lib
+
+## EMACS
+*~
+\#*
+.\#*
+.dir-locals.el
+
+## VIM
+*.sw?
+
+## OSx
+.DS_Store
