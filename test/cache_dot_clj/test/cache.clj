@@ -48,7 +48,7 @@
   (expect "Second call" f < t2 "is cached")
   (expect "Second call" f < t3 "is cached")
   (expect "Third call" f < t1 "is cached"))
-  
+
 (deftest invalidating-naive (invalidating fast-naive 50 51 52))
 (deftest invalidating-lru (invalidating fast-lru 50 51 52))
 (deftest invalidating-mutable-lru (invalidating fast-mutable-lru 50 51 52))
@@ -93,7 +93,7 @@
   (expect "Function" fast-lru > 100 "removed from cache")
   (expect "Third call" fast-lru < 300 "is cached")
   (expect "Second call" fast-lru < 100 "is cached"))
- 
+
 (deftest overflow-mutable-lru
   (invalidate-cache fast-mutable-lru 100)
   (invalidate-cache fast-mutable-lru 200)
@@ -109,7 +109,7 @@
   (expect "Function" fast-mutable-lru > 100 "removed from cache")
   (expect "Third call" fast-mutable-lru < 300 "is cached")
   (expect "Second call" fast-mutable-lru < 100 "is cached"))
-  
+
 (deftest expire-ttl
   (invalidate-cache fast-ttl 50)
   (invalidate-cache fast-ttl 500)
@@ -133,7 +133,7 @@
     (expect "First call" f > 54 "hits function")
     (expect "Second call" f < 54 "is cached")
     (expect "Second call" f > 53 "hits function")))
-    
+
 
 (defn-cached cached-fn
   (lru-cache-strategy 3)
@@ -143,4 +143,23 @@
   t)
 
 (deftest is-caching-def (is-caching cached-fn 100))
+
+
+(defn-cached fn-using-cache-key
+  (lru-cache-strategy 3)
+  {:cache-key last}
+  "This function should be cached based on the last arg. The first two args should not effect caching."
+  [_ _ t]
+  (Thread/sleep t)
+  t)
+
+
+(deftest cache-key
+  (let [t-last-arg 100]
+    (expect "First call" (partial fn-using-cache-key "random" "arg") > t-last-arg "hits function")
+    (expect "Second call" (partial fn-using-cache-key "random" "arg") < t-last-arg "is cached")
+    (expect "Call with matching last arg"  (partial fn-using-cache-key "baz" "zaz") < t-last-arg "is cached")
+    (expect "Call *not* matching last arg" (partial fn-using-cache-key "baz" "zaz") > (inc t-last-arg) "hits function")))
+
+
 
