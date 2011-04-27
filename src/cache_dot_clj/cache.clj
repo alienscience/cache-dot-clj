@@ -125,7 +125,7 @@
              (= f-name :anon))
       (throw (Exception. (str (strategy :description)
                               " does not support anonymous functions"))))
-    (if-not (empty? utils)
+    (when (and (not (:transient-cache options)) (not (empty? utils)))
       (swap! function-utils* assoc cached-f utils))
     cached-f))
 
@@ -137,6 +137,7 @@
    Following the strategy you can pass in an options map with the following keys:
 
     - :cache-key   – function applied to the args to generate the cache-key. Defaults to the identity function.
+    - :trainsient-cache   – cache will not be held onto by cache-dot-utils.  invalidate-cache does not work with these caches.
 
    e.g
 
