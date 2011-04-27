@@ -161,5 +161,14 @@
     (expect "Call with matching last arg"  (partial fn-using-cache-key "baz" "zaz") < t-last-arg "is cached")
     (expect "Call *not* matching last arg" (partial fn-using-cache-key "baz" "zaz") > (inc t-last-arg) "hits function")))
 
+(deftest transient-caches-test
+  (let [cached-inc  (cached inc naive-strategy {:transient-cache true})
+        weak-inc (java.lang.ref.WeakReference. cached-inc)
+        cached-inc nil ;; I don't need cached-inc anymore
+        ]
+    (System/gc)
+    (Thread/sleep 100)
+    (is (nil? (.get weak-inc)))))
+
 
 
