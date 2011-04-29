@@ -66,7 +66,9 @@
          (-> cs cache (get args) deref)))
      :invalidate
      (fn [args]
-       (swap! cache-state mark-dirty args)
+       (if (empty? args)
+         (reset! cache-state init)
+         (swap! cache-state mark-dirty args))
        nil)}))
 
 (defmacro defn-cached
@@ -85,7 +87,7 @@
                      cached* f-name# ~cache-strategy)
      (var ~fn-name)))
 
-(def function-utils* (atom {}))
+(def function-utils (atom {}))
 
 (def memoizers* {:external-memoize external-memoize
                  :internal-memoize internal-memoize})
@@ -102,7 +104,7 @@
       (throw (Exception. (str (strategy :description)
                               " does not support anonymous functions"))))
     (if-not (empty? utils)
-      (swap! function-utils* assoc cached-f utils))
+      (swap! function-utils assoc cached-f utils))
     cached-f))
 
 (defmacro cached
@@ -118,11 +120,11 @@
 (defn invalidate-cache 
   "Invalidates the cache for the function call with the given arguments
    causing it to be re-evaluated e.g
-     (invalidate-cache fib 30)  ;; A call to (fib 30) will not use the cache
-     (invalidate-cache fib 29)  ;; A call to (fib 29) will not use the cache
-     (fib 18)                   ;; A call to (fib 18) will use the cache" 
+     (invalidate-cache fun 30) 
+     (fun 30)                   ;; Does not use cache
+     (fun 30)                   ;; Uses cache" 
   [cached-f & args]
-  (if-let [inv-fn (:invalidate (@function-utils* cached-f))]
+  (if-let [inv-fn (:invalidate (@function-utils cached-f))]
     (inv-fn args)))
 
 

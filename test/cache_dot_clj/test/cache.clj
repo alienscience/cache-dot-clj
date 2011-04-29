@@ -52,6 +52,24 @@
 (deftest invalidating-ttl (invalidating fast-ttl 50 51 52))
 (deftest invalidating-external (invalidating fast-external 50 51 52))
 
+(defn invalidate-all [f t1 t2]
+  (invalidate-cache f t1)
+  (invalidate-cache f t2)
+  (expect "First call" f > t1 "hits function")
+  (expect "First call" f > t2 "hits function")
+  (invalidate-cache f)
+  (expect "Second call" f > t1 "hits function")
+  (expect "Second call" f > t2 "hits function"))
+
+(deftest invalidate-all-naive 
+  (invalidate-all fast-naive 50 51))
+(deftest invalidate-all-lru 
+  (invalidate-all fast-lru 50 51))
+(deftest invalidate-all-ttl 
+  (invalidate-all fast-ttl 50 51))
+(deftest invalidate-all-external 
+  (invalidate-all fast-external 50 51))
+
 ;; Highly used cache entries from previous tests live on -
 ;;   use a new cache for LU testing
 (deftest invalidating-lu
