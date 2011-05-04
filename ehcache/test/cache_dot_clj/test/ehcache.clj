@@ -1,11 +1,10 @@
-
 (ns cache-dot-clj.test.ehcache
   "Ehcache tests"
   (:use clojure.test)
   (:use cache-dot-clj.cache)
   (:require [cache-dot-clj.ehcache :as ehcache])
   (:use [clojure.set :only [union]])
-  (:use [clj-file-utils.core :only [rm-rf mkdir-p]])
+  (:use [clj-file-utils.core :only [rm-rf mkdir-p exists?]])
   (:require [clojure.java.io :as io]))
 
 ;;--- Copy and paste of cache-dot-clj.test.cache (different src tree)
@@ -94,7 +93,7 @@
 
 (deftest is-persistent
   ;; Start with a clean cache directory
-  (if (-> cache-directory* io/file .exists)
+  (if (exists? cache-directory*)
     (rm-rf cache-directory*))
   (mkdir-p cache-directory*)
   ;; Create the persistent cache 

@@ -6,7 +6,7 @@
                      [org.clojure/clojure-contrib "1.2.0"]
                      [swank-clojure "1.2.1"]
                      [org.slf4j/slf4j-simple "1.5.11"]
-                     [clj-file-utils "0.1.2"]]
+                     [clj-file-utils  "0.2.1"]]
   :license {:name "Eclipse Public License - v 1.0"
             :url "http://www.eclipse.org/legal/epl-v10.html"
             :distribution :repo
