@@ -1,7 +1,9 @@
-
 (ns cache-dot-clj.ehcache
-  (:import [net.sf.ehcache CacheManager Cache Element])
-  (:import [net.sf.ehcache.config CacheConfiguration])
+  (:import [net.sf.ehcache CacheManager Cache Element]
+           net.sf.ehcache.config.CacheConfiguration
+           net.sf.ehcache.management.ManagementService
+           javax.management.MBeanServer
+           java.lang.management.ManagementFactory)
   (:require [cache-dot-clj.bean :as bean-utils])
   (:require [clojure.contrib.string :as str])
   (:use clojure.contrib.prxml))
@@ -23,10 +25,10 @@
   "Converts a prxml compatible datastructure into an xml input stream
    for use by ehcache as a config"
   [config]
-  (-> config 
+  (-> config
       to-xml-str
       to-camel-case
-      (.getBytes "UTF-8") 
+      (.getBytes "UTF-8")
       java.io.ByteArrayInputStream.))
 
 (defn new-manager
@@ -140,6 +142,15 @@
   "Deletes caches in a cache manager"
   []
   (.removalAll manager))
+
+
+(defn-with-manager register-with-jmx
+  "Registers a cache manager's mbean with configuration and statistic information."
+  []
+  (ManagementService/registerMBeans manager
+                                    (ManagementFactory/getPlatformMBeanServer)
+                                    true true true true)
+  manager)
 
 (defn-with-manager shutdown
   "Shuts down a cache manager"

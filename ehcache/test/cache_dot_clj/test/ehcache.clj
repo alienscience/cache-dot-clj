@@ -2,10 +2,11 @@
   "Ehcache tests"
   (:use clojure.test)
   (:use cache-dot-clj.cache)
-  (:require [cache-dot-clj.ehcache :as ehcache])
   (:use [clojure.set :only [union]])
   (:use [clj-file-utils.core :only [rm-rf mkdir-p exists?]])
-  (:require [clojure.java.io :as io]))
+  (:require [cache-dot-clj.ehcache :as ehcache]
+            [clojure.java.io :as io]
+            [clojure.contrib.jmx :as jmx]))
 
 ;;--- Copy and paste of cache-dot-clj.test.cache (different src tree)
 
@@ -47,7 +48,7 @@
   (expect "Second call" f < t2 "is cached")
   (expect "Second call" f < t3 "is cached")
   (expect "Third call" f < t1 "is cached"))
-  
+
 (deftest invalidating-ehcache (invalidating fast-default 50 51 52))
 
 (defn-cached cached-fn
@@ -75,7 +76,7 @@
 ;; A CacheManager config to use for persistence tests
 (def persistent-manager-config*
      [:ehcache
-      [:disk-store 
+      [:disk-store
        {:path cache-directory*}]
       [:default-cache
        {:max-elements-in-memory 100
@@ -89,20 +90,23 @@
                                :eternal true
                                :overflow-to-disk true
                                :disk-persistent true
-                               :clear-on-flush true})
+                               :clear-on-flush true
+                               :statistics true})
 
 (deftest is-persistent
   ;; Start with a clean cache directory
   (if (exists? cache-directory*)
     (rm-rf cache-directory*))
   (mkdir-p cache-directory*)
-  ;; Create the persistent cache 
+  ;; Create the persistent cache
   (let [first-manager (ehcache/new-manager persistent-manager-config*)
+        _ (ehcache/register-with-jmx first-manager)
         f (cached slow (ehcache/strategy first-manager
                                          persistent-cache-config*))]
+    (is (not (empty? (jmx/mbean-names "net.sf.ehcache:*"))))
     (expect "First call" f > 100 "hits function")
     (expect "Second call" f > 101 "hits function")
-    (expect "Third call" f > 102 "hits function") 
+    (expect "Third call" f > 102 "hits function")
     (expect "Second call" f < 100 "is cached")
     (expect "Second call" f < 101 "is cached")
     (expect "Second call" f < 102 "is cached")
