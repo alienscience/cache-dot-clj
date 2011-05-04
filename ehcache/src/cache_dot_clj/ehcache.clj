@@ -8,13 +8,30 @@
   (:require [clojure.contrib.string :as str])
   (:use clojure.contrib.prxml))
 
-(defn- to-camel-case
-  "Converts an xml string into camelCase"
-  [x]
-  (str/replace-by #"-(\w)"
-                  #(.toUpperCase (second %))
-                  x))
+(defprotocol ToCamelCase
+  (to-camel-case [e] "Converts the keys in PRXML to be camel-case"))
 
+(extend-protocol ToCamelCase
+  String
+  (to-camel-case [x] (str/replace-by #"-(\w)"
+                                     #(.toUpperCase (second %))
+                                     x))
+  clojure.lang.Keyword
+  (to-camel-case [k] (to-camel-case (name k)))
+  clojure.lang.PersistentVector
+  (to-camel-case [v]
+                 (reduce (fn [so-far e]
+                           (conj so-far (to-camel-case e)))
+                         []
+                         v))
+  clojure.lang.PersistentArrayMap
+  (to-camel-case [m]
+                 (reduce (fn [so-far [k v]]
+                           (assoc so-far
+                             (to-camel-case k)
+                             v))
+                         {}
+                         m)))
 (defn- to-xml-str
   "Converts a prxml compatible datastructure into a string
    containing xml"
@@ -26,8 +43,8 @@
    for use by ehcache as a config"
   [config]
   (-> config
-      to-xml-str
       to-camel-case
+      to-xml-str
       (.getBytes "UTF-8")
       java.io.ByteArrayInputStream.))
 
@@ -150,7 +167,8 @@
   (ManagementService/registerMBeans manager
                                     (ManagementFactory/getPlatformMBeanServer)
                                     true true true true)
-  manager)
+  manager
+  )
 
 (defn-with-manager shutdown
   "Shuts down a cache manager"
