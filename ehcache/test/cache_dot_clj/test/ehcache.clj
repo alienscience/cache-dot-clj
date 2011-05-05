@@ -25,7 +25,7 @@
 
 (defn expect [situation f check t should]
   (let [{:keys [msecs ret]} (how-long (f t))]
-    (is (check msecs t) (str situation " (" t ") " should))
+    (is (check msecs t) (str situation " (expected time:" t ", actual time: " msecs ") "  should))
     (is (= ret t) (str situation " returns correct value"))))
 
 (defn is-caching [f t]
