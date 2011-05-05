@@ -120,3 +120,15 @@
     (expect "First call" f < 101 "is cached")
     (expect "First call" f < 102 "is cached")
     (ehcache/shutdown second-manager)))
+
+
+(defrecord RecordThatHasNonUniqueToString [x]
+  Object
+  (toString [x] "Look at me, I'm always the same so I would be a horrible cache key."))
+
+
+;; This test ensures that we are internally using serialization in the key, as the docs advertise
+(deftest serialization-is-used
+  (let [cached-identity (cached identity (ehcache/strategy))]
+    (is (not= (cached-identity (RecordThatHasNonUniqueToString. 55))
+              (cached-identity (RecordThatHasNonUniqueToString. 42))))))
