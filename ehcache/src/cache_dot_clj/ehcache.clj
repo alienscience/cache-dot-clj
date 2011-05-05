@@ -3,7 +3,8 @@
            net.sf.ehcache.config.CacheConfiguration
            net.sf.ehcache.management.ManagementService
            javax.management.MBeanServer
-           java.lang.management.ManagementFactory)
+           java.lang.management.ManagementFactory
+           java.io.Serializable)
   (:require [cache-dot-clj.bean :as bean-utils])
   (:require [clojure.contrib.string :as str])
   (:use clojure.contrib.prxml))
@@ -110,10 +111,9 @@
   "Looks up an item in the given cache. Returns a vector:
     [element-exists? value]"
   [cache k]
-  (let [element (.get cache (str k))]
-    (if-not (nil? element)
-      [true (.getValue element)]
-      [false nil])))
+  (if-let [element (.get cache (str k))]
+    [true (.getValue element)]
+    [false nil]))
 
 (defn invalidate
   [cache k]
@@ -167,8 +167,7 @@
   (ManagementService/registerMBeans manager
                                     (ManagementFactory/getPlatformMBeanServer)
                                     true true true true)
-  manager
-  )
+  manager)
 
 (defn-with-manager shutdown
   "Shuts down a cache manager"
