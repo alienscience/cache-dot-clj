@@ -61,13 +61,7 @@
 (deftest is-caching-def (is-caching cached-fn 100))
 
 
-(deftest cache-names
-  (let [expected #{"cache-dot-clj.test.ehcache.slow"
-                   "cache-dot-clj.test.ehcache.cached-fn"}]
-    (is (= (union (set (ehcache/cache-seq)) expected)
-           expected))))
-
-;;------------- Persistence tests ----------------------------------------------
+;; ------------- Persistence tests ----------------------------------------------
 
 ;; Directory to store peristent cache files
 (def cache-directory* (str (io/file (System/getProperty "java.io.tmpdir")
@@ -81,7 +75,7 @@
       [:default-cache
        {:max-elements-in-memory 100
         :eternal false
-        :overflow-to-disk true
+        :overflow-to-disk false
         :disk-persistent false
         :memory-store-eviction-policy "LRU"}]])
 
@@ -126,9 +120,27 @@
   Object
   (toString [x] "Look at me, I'm always the same so I would be a horrible cache key."))
 
+;; ------------- Misc tests ----------------------------------------------
 
 ;; This test ensures that we are internally using serialization in the key, as the docs advertise
 (deftest serialization-is-used
   (let [cached-identity (cached identity (ehcache/strategy))]
     (is (not= (cached-identity (RecordThatHasNonUniqueToString. 55))
               (cached-identity (RecordThatHasNonUniqueToString. 42))))))
+
+
+(deftest cache-names
+  (let [cache-config {:max-elements-in-memory 100
+                      :eternal false
+                      :overflow-to-disk false
+                      :disk-persistent false}
+        manager (ehcache/new-manager [:ehcache
+                                      [:default-cache
+                                       cache-config]])
+        _ (cached slow (ehcache/strategy manager cache-config))
+        _ (cached identity (ehcache/strategy manager cache-config))
+        expected #{"user.slow"  ;; shouldn't it be "cache-dot-clj.test.ehcache.slow" ??
+                   "user.identity"}]
+    (is (= (set (ehcache/cache-seq manager))
+           expected))))
+

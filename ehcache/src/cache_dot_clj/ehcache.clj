@@ -101,23 +101,28 @@
       (add-cache manager config-obj cache-name))
     (add-cache manager config cache-name)))
 
+;; By default the key (args of the fn) would be a clojure.lang.ArraySeq, and for some reason
+;; seemily identical versions (i.e. = would be true) ehcache would have misses (only) after
+;; persisted to disk.  By converting the ArraySeq's over then the keys match within ehcache.
+(def cache-key vec)
+
 (defn add
   "Adds an item to the given cache and returns the value added"
-  [cache k v]
-  (.put cache (Element. (str k) v))
+  [^Cache cache k ^Serializable v]
+  (.put cache (Element. ^Serializable (cache-key k) v))
   v)
 
 (defn lookup
   "Looks up an item in the given cache. Returns a vector:
     [element-exists? value]"
-  [cache k]
-  (if-let [element (.get cache (str k))]
+  [^Cache cache k]
+  (if-let [^Element element (.get cache ^Serializable (cache-key k))]
     [true (.getValue element)]
     [false nil]))
 
 (defn invalidate
-  [cache k]
-  (.remove cache (str k)))
+  [^Cache cache k]
+  (.remove cache ^Serializable (cache-key k)))
 
 (defn- make-strategy
   "Create a strategy map for use with cache-dot-clj.cache"
