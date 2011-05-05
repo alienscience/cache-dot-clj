@@ -128,7 +128,6 @@
     (is (not= (cached-identity (RecordThatHasNonUniqueToString. 55))
               (cached-identity (RecordThatHasNonUniqueToString. 42))))))
 
-
 (deftest cache-names
   (let [cache-config {:max-elements-in-memory 100
                       :eternal false
@@ -139,7 +138,7 @@
                                        cache-config]])
         _ (cached slow (ehcache/strategy manager cache-config))
         _ (cached identity (ehcache/strategy manager cache-config))
-        expected #{"user.slow"  ;; shouldn't it be "cache-dot-clj.test.ehcache.slow" ??
+        expected #{"user.slow"  ;; *ns* is user here due to an artifact of how deftest runs I believe...
                    "user.identity"}]
     (is (= (set (ehcache/cache-seq manager))
            expected))))
