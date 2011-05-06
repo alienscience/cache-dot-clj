@@ -155,3 +155,25 @@
     (future (cached-side-effect 100)) ;; Fire functions a the same time to ensure the second one blocks on first computation
     (cached-side-effect 100)
     (is (= 100 @total))))
+
+(def manager-with-blocking-config*
+  [:ehcache
+   [:default-cache
+    [:cache-decorator-factory {:class "net.sf.ehcache.constructs.blocking.BlockingCache"}] ;; Note the use of BlockingCache
+    {:max-elements-in-memory 100
+     :eternal false
+     :overflow-to-disk false
+     :disk-persistent false
+     :memory-store-eviction-policy "LRU"}]])
+
+(deftest blocking-cache-via-default-config
+  (let [blocking-manager (ehcache/new-manager manager-with-blocking-config*)
+        total (atom 0)
+        side-effect (fn [x] (Thread/sleep x) (swap! total + x))
+        cached-side-effect (cached side-effect (ehcache/strategy blocking-manager))]
+    (future (cached-side-effect 100)) ;; Fire functions a the same time to ensure the second one blocks on first computation
+    (cached-side-effect 100)
+    (is (= 100 @total))
+    (ehcache/shutdown blocking-manager)))
+
+
