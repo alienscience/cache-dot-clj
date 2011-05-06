@@ -1,5 +1,5 @@
 (ns cache-dot-clj.ehcache
-  (:import [net.sf.ehcache CacheManager Cache Element]
+  (:import [net.sf.ehcache CacheManager Cache Element Ehcache]
            net.sf.ehcache.config.CacheConfiguration
            net.sf.ehcache.constructs.blocking.BlockingCache
            net.sf.ehcache.management.ManagementService
@@ -105,9 +105,8 @@
 (defn-with-manager create-blocking-cache
   "Returns an ehcache Cache object with the given name and config."
   [cache-name config]
-  (println "I'm making a blocking cache...")
-  (let [^Cache cache (create-cache manager cache-name config)
-        ^Cache blocking-cache (BlockingCache. cache)]
+  (let [^Ehcache cache (create-cache manager cache-name config)
+       ^Ehcache blocking-cache (BlockingCache. cache)]
     (.replaceCacheWithDecoratedCache manager cache blocking-cache)
     blocking-cache))
 
@@ -118,20 +117,20 @@
 
 (defn add
   "Adds an item to the given cache and returns the value added"
-  [^Cache cache k ^Serializable v]
+  [^Ehcache cache k ^Serializable v]
   (.put cache (Element. ^Serializable (cache-key k) v))
   v)
 
 (defn lookup
   "Looks up an item in the given cache. Returns a vector:
     [element-exists? value]"
-  [^Cache cache k]
+  [^Ehcache cache k]
   (if-let [^Element element (.get cache ^Serializable (cache-key k))]
     [true (.getValue element)]
     [false nil]))
 
 (defn invalidate
-  [^Cache cache k]
+  [^Ehcache cache k]
   (.remove cache ^Serializable (cache-key k)))
 
 (defn- make-strategy
@@ -202,6 +201,6 @@
   "Shuts down a cache manager"
   []
   (doseq [cache-name (cache-seq manager)
-          :let [i (.getCache manager cache-name)]]
-    (.flush i))
+          :let [^Ehcache cache (.getEhcache manager cache-name)]]
+    (.flush cache))
   (.shutdown manager))
