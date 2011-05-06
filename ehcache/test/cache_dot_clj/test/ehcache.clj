@@ -143,3 +143,15 @@
     (is (= (set (ehcache/cache-seq manager))
            expected))))
 
+
+;; ------------- Blocking tests ----------------------------------------------
+
+
+
+(deftest blocking-cache-via-runtime-config
+  (let [total (atom 0)
+        side-effect (fn [x] (Thread/sleep x) (swap! total + x))
+        cached-side-effect (cached side-effect (ehcache/strategy {:max-elements-in-memory 10 :block true}))]
+    (future (cached-side-effect 100)) ;; Fire functions a the same time to ensure the second one blocks on first computation
+    (cached-side-effect 100)
+    (is (= 100 @total))))

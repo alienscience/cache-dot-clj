@@ -1,6 +1,7 @@
 (ns cache-dot-clj.ehcache
   (:import [net.sf.ehcache CacheManager Cache Element]
            net.sf.ehcache.config.CacheConfiguration
+           net.sf.ehcache.constructs.blocking.BlockingCache
            net.sf.ehcache.management.ManagementService
            javax.management.MBeanServer
            java.lang.management.ManagementFactory
@@ -101,6 +102,15 @@
       (add-cache manager config-obj cache-name))
     (add-cache manager config cache-name)))
 
+(defn-with-manager create-blocking-cache
+  "Returns an ehcache Cache object with the given name and config."
+  [cache-name config]
+  (println "I'm making a blocking cache...")
+  (let [^Cache cache (create-cache manager cache-name config)
+        ^Cache blocking-cache (BlockingCache. cache)]
+    (.replaceCacheWithDecoratedCache manager cache blocking-cache)
+    blocking-cache))
+
 ;; By default the key (args of the fn) would be a clojure.lang.ArraySeq, and for some reason
 ;; seemily identical versions (i.e. = would be true) ehcache would have misses (only) after
 ;; persisted to disk.  By converting the ArraySeq's over then the keys match within ehcache.
@@ -134,6 +144,16 @@
    :description "Ehcache backend"
    :plugs-into :external-memoize})
 
+(defn- infer-cache-create
+  "Detects custom cache config properties and returns the appropriate cache creation function along with
+   the updated config map with the sepcal config properites removed.
+
+   As of now, the only custom config property is :block, which will create a blocking cache."
+  [config]
+  (if (and (map? config) (:block config))
+    [create-blocking-cache (dissoc config :block)]
+    [create-cache config]))
+
 (defn strategy
   "Returns a strategy for use with cache-dot-clj.cache using the
    default configuration or the given cache configuration.
@@ -151,9 +171,10 @@
        (make-strategy (partial default manager-or-config))
        (strategy (CacheManager/getInstance) manager-or-config)))
   ([manager config]
-     (make-strategy
-      (fn [f-name]
-        (create-cache manager f-name config)))))
+     (let [[create config] (infer-cache-create config)]
+       (make-strategy
+        (fn [f-name]
+          (create manager f-name config))))))
 
 ;;------ Utils -----------------------------------------------------------------
 
