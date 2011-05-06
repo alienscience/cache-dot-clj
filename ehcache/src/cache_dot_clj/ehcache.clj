@@ -146,7 +146,10 @@
    A CacheManager can also be passed in as the first argument, without this
    the singleton CacheManager is used (which should be fine for most uses)."
   ([]       (make-strategy default))
-  ([config] (strategy (CacheManager/getInstance) config))
+  ([manager-or-config]
+     (if (instance? CacheManager manager-or-config)
+       (make-strategy (partial default manager-or-config))
+       (strategy (CacheManager/getInstance) manager-or-config)))
   ([manager config]
      (make-strategy
       (fn [f-name]
