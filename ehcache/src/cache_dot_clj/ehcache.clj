@@ -81,6 +81,11 @@
   [cache-name]
   (.addCacheIfAbsent manager cache-name))
 
+(defn-with-manager get-cache
+  "Returns the ehcache for the given name."
+  [^String cache-name]
+  (.getEhcache manager cache-name))
+
 (defn- add-cache
   "Adds the cache with the given config and name to the cache-manager"
   [cache-manager config cache-name]
