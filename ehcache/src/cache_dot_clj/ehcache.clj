@@ -108,11 +108,11 @@
     (add-cache manager config cache-name)))
 
 (defn-with-manager create-blocking-cache
-  "Returns an ehcache Cache object with the given name and config."
+  "Returns the registered blocking-cache, creating and adding a new one if needed."
   [cache-name config]
   (let [^Ehcache cache (create-cache manager cache-name config)
-       ^Ehcache blocking-cache (BlockingCache. cache)]
-    (.replaceCacheWithDecoratedCache manager cache blocking-cache)
+        ^Ehcache blocking-cache (BlockingCache. cache)]
+    (.addDecoratedCacheIfAbsent manager blocking-cache)
     blocking-cache))
 
 ;; By default the key (args of the fn) would be a clojure.lang.ArraySeq, and for some reason
