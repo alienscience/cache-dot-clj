@@ -200,7 +200,4 @@
 (defn-with-manager shutdown
   "Shuts down a cache manager"
   []
-  (doseq [cache-name (cache-seq manager)
-          :let [^Ehcache cache (.getEhcache manager cache-name)]]
-    (.flush cache))
   (.shutdown manager))
