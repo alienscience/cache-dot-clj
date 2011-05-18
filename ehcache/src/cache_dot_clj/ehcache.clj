@@ -118,7 +118,10 @@
 ;; By default the key (args of the fn) would be a clojure.lang.ArraySeq, and for some reason
 ;; seemily identical versions (i.e. = would be true) ehcache would have misses (only) after
 ;; persisted to disk.  By converting the ArraySeq's over then the keys match within ehcache.
-(def cache-key vec)
+(defn cache-key [key]
+  (if (string? key)
+    key
+    (vec key)))
 
 (defn add
   "Adds an item to the given cache and returns the value added"
