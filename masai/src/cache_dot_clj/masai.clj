@@ -41,7 +41,6 @@
 
 (defn- open [db]
   (db/open db)
-  (db/truncate! db)
   db)
 
 (defn strategy
