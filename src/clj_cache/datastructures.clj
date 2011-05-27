@@ -1,6 +1,6 @@
 
-(ns cache-dot-clj.datastructures
-  "Datastructures for use with cache-dot-clj"
+(ns clj-cache.datastructures
+  "Datastructures for use with clj-cache"
   (:import [java.util LinkedHashMap Collections]))
 
 

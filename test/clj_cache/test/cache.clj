@@ -1,7 +1,7 @@
-(ns cache-dot-clj.test.cache
+(ns clj-cache.test.cache
   "Resettable memoize tests"
   (:use clojure.test)
-  (:use cache-dot-clj.cache))
+  (:use clj-cache.cache))
 
 (defn slow [a] (Thread/sleep a) a)
 (def fast-naive (cached slow naive-strategy))

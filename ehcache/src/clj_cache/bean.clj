@@ -17,7 +17,7 @@
 (ns
     #^{:author "Justin Balthrop"
        :doc "Modify bean attributes in clojure."}
-  cache-dot-clj.bean
+  clj-cache.bean
   (:import [java.beans Introspector]))
 
 (defn- property-key [property]

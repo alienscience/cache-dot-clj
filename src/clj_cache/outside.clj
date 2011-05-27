@@ -1,5 +1,5 @@
 
-(ns cache-dot-clj.outside
+(ns clj-cache.outside
   "Functions to help with caches outside the current VM"
   (import [java.security MessageDigest])
   (import [sun.misc BASE64Encoder]))

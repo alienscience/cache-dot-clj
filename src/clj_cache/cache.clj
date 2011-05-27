@@ -1,6 +1,6 @@
-(ns cache-dot-clj.cache
+(ns clj-cache.cache
   "Resettable memoize"
-  (:require [cache-dot-clj.datastructures :as ds]))
+  (:require [clj-cache.datastructures :as ds]))
 
 (declare naive-strategy)
 

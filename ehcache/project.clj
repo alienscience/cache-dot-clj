@@ -1,7 +1,7 @@
-(defproject uk.org.alienscience/ehcache-dot-clj "0.0.4-SNAPSHOT"
-  :description "Ehcache support for cache-dot-clj."
+(defproject clj-cache-ehcache "0.0.4-SNAPSHOT"
+  :description "Ehcache support for clj-cache"
   :dependencies [[net.sf.ehcache/ehcache-core "2.4.2"]
-                 [uk.org.alienscience/cache-dot-clj "0.0.4-SNAPSHOT"]]
+                 [clj-cache "0.0.4-SNAPSHOT"]]
   :dev-dependencies [[org.clojure/clojure "1.2.0"]
                      [org.clojure/clojure-contrib "1.2.0"]
                      [swank-clojure "1.2.1"]

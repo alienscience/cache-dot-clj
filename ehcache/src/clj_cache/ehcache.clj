@@ -1,4 +1,4 @@
-(ns cache-dot-clj.ehcache
+(ns clj-cache.ehcache
   (:import [net.sf.ehcache CacheManager Cache Element Ehcache]
            net.sf.ehcache.config.CacheConfiguration
            net.sf.ehcache.constructs.blocking.BlockingCache
@@ -6,7 +6,7 @@
            javax.management.MBeanServer
            java.lang.management.ManagementFactory
            java.io.Serializable)
-  (:require [cache-dot-clj.bean :as bean-utils])
+  (:require [clj-cache.bean :as bean-utils])
   (:require [clojure.contrib.string :as str])
   (:use clojure.contrib.prxml))
 
@@ -118,7 +118,10 @@
 ;; By default the key (args of the fn) would be a clojure.lang.ArraySeq, and for some reason
 ;; seemily identical versions (i.e. = would be true) ehcache would have misses (only) after
 ;; persisted to disk.  By converting the ArraySeq's over then the keys match within ehcache.
-(def cache-key vec)
+(defn cache-key [key]
+  (if (string? key)
+    key
+    (vec key)))
 
 (defn add
   "Adds an item to the given cache and returns the value added"
@@ -139,7 +142,7 @@
   (.remove cache ^Serializable (cache-key k)))
 
 (defn- make-strategy
-  "Create a strategy map for use with cache-dot-clj.cache"
+  "Create a strategy map for use with clj-cache.cache"
   [init-fn]
   {:init init-fn
    :lookup lookup
@@ -159,7 +162,7 @@
     [create-cache config]))
 
 (defn strategy
-  "Returns a strategy for use with cache-dot-clj.cache using the
+  "Returns a strategy for use with clj-cache.cache using the
    default configuration or the given cache configuration.
    The config can be a object of class
      net.sf.ehcache.config.CacheConfiguration

@@ -1,14 +1,14 @@
-(ns cache-dot-clj.test.ehcache
+(ns clj-cache.test.ehcache
   "Ehcache tests"
   (:use clojure.test)
-  (:use cache-dot-clj.cache)
+  (:use clj-cache.cache)
   (:use [clojure.set :only [union]])
   (:use [clj-file-utils.core :only [rm-rf mkdir-p exists?]])
-  (:require [cache-dot-clj.ehcache :as ehcache]
+  (:require [clj-cache.ehcache :as ehcache]
             [clojure.java.io :as io]
             [clojure.contrib.jmx :as jmx]))
 
-;;--- Copy and paste of cache-dot-clj.test.cache (different src tree)
+;;--- Copy and paste of clj-cache.test.cache (different src tree)
 
 (defn slow [a] (Thread/sleep a) a)
 

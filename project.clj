@@ -1,4 +1,4 @@
-(defproject uk.org.alienscience/cache-dot-clj "0.0.4-SNAPSHOT"
+(defproject clj-cache "0.0.4-SNAPSHOT"
   :description "A resettable memoize."
   :dependencies []
   :dev-dependencies [[org.clojure/clojure "1.2.0"]

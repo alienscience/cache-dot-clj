@@ -1,14 +1,14 @@
 
-Cache dot clj
+clj-cache
 =============
 
- A Clojure library that caches the results of impure functions. This library provides 3 internal caching strategies and can also cache externally or persistently using the java [ehcache](http://github.com/alienscience/cache-dot-clj/blob/master/ehcache/README.md) package.
+ A Clojure library that caches the results of impure functions. This library provides 3 internal caching strategies and can also cache externally or persistently using the java [ehcache](http://github.com/alienscience/clj-cache/blob/master/ehcache/README.md) package.
 
 I have found this useful for caching the results of database calls and for holding HTML snippets.
 
-This library is available at [clojars.org](http://clojars.org/uk.org.alienscience/cache-dot-clj) for use with Leiningen, Cake or Maven.
+This library is available at [clojars.org](http://clojars.org/uk.org.alienscience/clj-cache) for use with Leiningen, Cake or Maven.
 /
-     :dependencies [[uk.org.alienscience/cache-dot-clj "0.0.3"]]
+     :dependencies [[uk.org.alienscience/clj-cache "0.0.3"]]
 
 The internal caching functions consist of small modifications to the memoization functions described in these two excellent blog posts, [the rule of three](http://kotka.de/blog/2010/03/The_Rule_of_Three.html) and [memoize done right](http://kotka.de/blog/2010/03/memoize_done_right.html). I'd recommend these posts to Clojure programmers as they discuss flexible apis and concurrency in real world detail.
 
@@ -17,9 +17,9 @@ Example
 -------
 
     (ns an-example
-      (:use cache-dot-clj.cache))
+      (:use clj-cache.cache))
 
-    (defn-cached get-user-from-db 
+    (defn-cached get-user-from-db
       (lru-cache-strategy 1000)
       "Gets a user details from a database. Caches the last 1000
        users read in i.e support serving a 1000 concurrent users
@@ -30,7 +30,7 @@ Example
 
     ;; First read of the user is slow
     (get-user-from-db "fred")
- 
+
     ;; Second is fast
     (get-user-from-db "fred")
 
@@ -49,10 +49,10 @@ Internal Algorithms
     ;; Least Recently Used
     (lru-cache-strategy cache-size)
 
-    ;; Least Recently Used 
+    ;; Least Recently Used
     ;; (faster LRU removal, slower under multiple threads)
     (mutable-lru-cache-strategy cache-size)
-    
+
     ;; Time to live
     (ttl-cache-strategy time-to-live-millisecs)
 
@@ -66,7 +66,7 @@ External Algorithms
 
 Please see the READMEs in each subdirectory:
 
-- An interface to [ehcache](http://github.com/alienscience/cache-dot-clj/blob/master/ehcache/README.md). Ehcache provides persistent caches that survive application restarts and caches distributed over many machines. 
+- An interface to [ehcache](http://github.com/alienscience/clj-cache/blob/master/ehcache/README.md). Ehcache provides persistent caches that survive application restarts and caches distributed over many machines.
 
 
 Available Functions
