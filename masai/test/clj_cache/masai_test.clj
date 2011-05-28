@@ -1,7 +1,7 @@
-(ns cache-dot-clj.masai-test
+(ns clj-cache.masai-test
   (:use clojure.test
-        cache-dot-clj.cache)
-  (:require [cache-dot-clj.masai :as masai]))
+        clj-cache.cache)
+  (:require [clj-cache.masai :as masai]))
 
 (defn slow [a] (Thread/sleep a) a)
 

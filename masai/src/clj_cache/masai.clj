@@ -1,10 +1,9 @@
-(ns cache-dot-clj.masai
-  (:use [cereal format java]) 
-  (require (masai [redis :as redis]
-                  [tokyo :as tokyo]
-                  [db :as db])))
+(ns clj-cache.masai
+  (:use cereal.format) 
+  (require [masai.db :as db]
+           [cereal.java :as j]))
 
-(def form (make))
+(def form (j/make))
 
 (defn add
   "Add an item to the given cache and return the value added."
@@ -37,11 +36,23 @@
 (defn- prefix [f-name s] (str f-name "/" s))
 
 (defn- key-format [f-name]
-  (fn [^String s] (bytes (.getBytes (prefix f-name)))))
+  (fn [^String s] (bytes (.getBytes (prefix f-name s)))))
 
 (defn- open [db]
   (db/open db)
   db)
+
+(defmacro init [type opts]
+  (require
+   (case type
+         :redis 'masai.redis
+         :tokyo 'masai.tokyo))
+  `(fn [x#]
+     (open
+      (~(case type
+              :redis 'masai.redis/make
+              :tokyo 'masai.tokyo/make)
+       (assoc ~opts :key-format (key-format x#))))))
 
 (defn strategy
   "Returns a strategy for use with cache-dot-clj.cache. Given
@@ -50,16 +61,7 @@
    naming the Masai backend to use. Possible keywords are :tokyo and
    :redis. If given two arguments, the second argument is expected to
    be a map of options to pass to whatever backend your using as options."
-  ([] (make-strategy
-       #(open (redis/make {:key-format (key-format %)}))))
-  ([back opts]
-     (case
-      back
-      :redis (make-strategy
-              #(open
-                (redis/make
-                 (assoc opts :key-format (key-format %)))))
-      :tokyo (make-strategy
-              #(open
-                (tokyo/make
-                 (assoc opts :key-format (key-format %))))))))
+  ([] (make-strategy (init :redis nil)))
+  ([back opts] (case back
+                     :redis (make-strategy (init :redis opts))
+                     :tokyo (make-strategy (init :tokyo opts)))))
